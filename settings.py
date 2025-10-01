@@ -29,10 +29,47 @@ def get_available_languages():
 
     return languages
 
+def get_available_source_languages():
+    """Get list of available source languages from installed models"""
+    languages = ["Auto"]
+
+    try:
+        import argostranslate.package
+
+        installed_packages = argostranslate.package.get_installed_packages()
+        source_langs = set()
+        for pkg in installed_packages:
+            source_langs.add(pkg.from_code)
+
+        if source_langs:
+            languages.extend(sorted(list(source_langs)))
+
+    except ImportError:
+        pass
+    except Exception as e:
+        log.log_debug(f"Error getting available source languages: {e}")
+
+    return languages
+
 Settings().register_group("translation", "Translation")
 
 languages = get_available_languages()
+source_languages = get_available_source_languages()
 import json
+Settings().register_setting(
+    "translation.source_language",
+    f"""
+    {{
+        "title": "Source Language",
+        "type": "string",
+        "default": "Auto",
+        "enum": {json.dumps(source_languages)},
+        "enumDescriptions": {json.dumps(source_languages)},
+        "description": "Source language for translations (Auto = automatic detection)"
+    }}
+    """
+)
+
 Settings().register_setting(
     "translation.destination_language",
     f"""

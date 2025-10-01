@@ -68,6 +68,14 @@ class TranslationCache:
 
         if not self.models_initialized:
             self._init_models()
+
+        # Check if user has selected a specific source language
+        if source_lang is None:
+            user_source_lang = Settings().get_string("translation.source_language")
+            if user_source_lang and user_source_lang != "Auto":
+                source_lang = user_source_lang
+                log.log_debug(f"Using user-selected source language: {source_lang}")
+
         if source_lang is None:
             source_lang = detect_language_argos(text, self.models)
             if source_lang:
