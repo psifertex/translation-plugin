@@ -278,27 +278,36 @@ def detect_arabic(text):
 def translate_text(text, source_lang, model):
     """
     Translate text using the provided model
+    Handles compound names by splitting on underscores and colons, translating parts, and recombining
     """
     try:
         import argostranslate.translate
+        import re
 
         original_text = text
         stripped_text = strip_programming_prefix(text)
-        if stripped_text != text:
-            prefix = text[:len(text)-len(stripped_text)]
-            log.log_debug(f"Stripped prefix '{prefix}' from '{text}'")
+        prefix = text[:len(text)-len(stripped_text)] if stripped_text != text else ""
 
-            log.log_debug(f"Calling argostranslate.translate with text='{stripped_text}', from={model.from_code}, to={model.to_code}")
-            translated_part = argostranslate.translate.translate(stripped_text, model.from_code, model.to_code)
-            log.log_debug(f"Argostranslate returned: '{translated_part}'")
+        # Split on underscores and colons (keeping delimiters)
+        parts = re.split(r'([_:])', stripped_text)
 
-            result = prefix + translated_part
-            return result
-        else:
-            log.log_debug(f"Calling argostranslate.translate with text='{text}', from={model.from_code}, to={model.to_code}")
-            result = argostranslate.translate.translate(text, model.from_code, model.to_code)
-            log.log_debug(f"Argostranslate returned: '{result}'")
-            return result
+        translated_parts = []
+        for part in parts:
+            # Keep delimiters as-is
+            if part in ['_', ':']:
+                translated_parts.append(part)
+            # Only translate non-empty parts that aren't pure numbers or special chars
+            elif part and not re.match(r'^[\d\[\]\(\)]+$', part):
+                log.log_debug(f"Translating part: '{part}'")
+                translated_part = argostranslate.translate.translate(part, model.from_code, model.to_code)
+                translated_parts.append(translated_part)
+            else:
+                translated_parts.append(part)
+
+        result = prefix + ''.join(translated_parts)
+        log.log_debug(f"Calling argostranslate.translate with text='{stripped_text}', from={model.from_code}, to={model.to_code}")
+        log.log_debug(f"Argostranslate returned: '{result}'")
+        return result
 
     except Exception as e:
         log.log_error(f"Translation failed for '{text}': {e}")
