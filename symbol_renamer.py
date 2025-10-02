@@ -2,7 +2,7 @@
 Automatic symbol renaming with translations after analysis completes
 """
 
-from binaryninja import AnalysisCompletionEvent, BackgroundTaskThread, Settings
+from binaryninja import AnalysisCompletionEvent, BackgroundTaskThread, Settings, Symbol
 from .translation_core import TranslationCache, log
 
 
@@ -55,7 +55,7 @@ class TranslateSymbolRenamer:
                     if prefix:
                         translated = prefix + translated
 
-                    bv.define_user_symbol(bv.Symbol(symbol.type, data_var, translated))
+                    bv.define_user_symbol(Symbol(symbol.type, data_var, translated))
                     renamed_count += 1
                     log.log_debug(f"Renamed data variable: {symbol.name} -> {translated}")
 
@@ -75,7 +75,7 @@ class TranslateSymbolRenamer:
                         prefix = self._get_rename_prefix()
                         translated = f"{prefix}str_{translated}" if prefix else f"str_{translated}"
 
-                        bv.define_user_symbol(bv.Symbol(symbol.type, string.start, translated))
+                        bv.define_user_symbol(Symbol(symbol.type, string.start, translated))
                         renamed_count += 1
                         log.log_debug(f"Renamed string: {symbol.name} -> {translated}")
 
