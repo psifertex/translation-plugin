@@ -126,3 +126,80 @@ class TranslateRenderLayer(RenderLayer):
         except Exception as e:
             log.log_error(f"Error in apply_to_disassembly_block: {e}")
             return lines
+
+    def apply_to_high_level_il_body(self, function, lines):
+        """Apply translations to High Level IL view"""
+        log.log_debug(f"apply_to_high_level_il_body called with {len(lines)} lines")
+
+        if not self._should_process():
+            return lines
+
+        try:
+            for line in lines:
+                if hasattr(line, 'tokens') and line.tokens:
+                    for i, token in enumerate(line.tokens):
+                        try:
+                            if hasattr(token, 'text') and token.text and '�' not in token.text:
+                                if token.type in [InstructionTextTokenType.StringToken,
+                                                InstructionTextTokenType.CodeSymbolToken,
+                                                InstructionTextTokenType.DataSymbolToken,
+                                                InstructionTextTokenType.ImportToken]:
+
+                                    log.log_debug(f"Processing token text: {repr(token.text)}, type: {token.type}")
+                                    translated = self.cache.get(token.text)
+                                    if translated != token.text:
+                                        prefix = self._get_rename_prefix()
+                                        if prefix:
+                                            translated = prefix + translated
+                                        line.tokens[i] = self._replace_token_text(token, translated)
+                                        log.log_debug(f"Replaced '{token.text}' with '{translated}'")
+
+                        except Exception as e:
+                            log.log_debug(f"Error processing token: {e}")
+
+            return lines
+
+        except Exception as e:
+            log.log_error(f"Error in apply_to_high_level_il_body: {e}")
+            return lines
+
+    def apply_to_misc_linear_lines(self, obj, prev, next, lines):
+        """Apply translations to miscellaneous linear view lines (strings, etc.)"""
+        log.log_debug(f"apply_to_misc_linear_lines called with {len(lines)} lines")
+
+        if not self._should_process():
+            return lines
+
+        try:
+            for line in lines:
+                if hasattr(line, 'contents') and line.contents:
+                    contents = line.contents
+                    if hasattr(contents, 'tokens') and contents.tokens:
+                        for i, token in enumerate(contents.tokens):
+                            try:
+                                if hasattr(token, 'text') and token.text:
+                                    if '�' not in token.text:
+                                        if token.type in [InstructionTextTokenType.StringToken,
+                                                        InstructionTextTokenType.CodeSymbolToken,
+                                                        InstructionTextTokenType.DataSymbolToken,
+                                                        InstructionTextTokenType.ImportToken]:
+
+                                            log.log_debug(f"Processing token text: {repr(token.text)}, type: {token.type}")
+                                            translated = self.cache.get(token.text)
+                                            if translated != token.text:
+                                                prefix = self._get_rename_prefix()
+                                                if prefix:
+                                                    translated = prefix + translated
+                                                contents.tokens[i] = self._replace_token_text(token, translated)
+                                                log.log_debug(f"Replaced '{token.text}' with '{translated}'")
+
+                            except Exception as e:
+                                log.log_debug(f"Error processing token: {e}")
+
+            return lines
+
+        except Exception as e:
+            log.log_error(f"Error in apply_to_misc_linear_lines: {e}")
+            import traceback
+            log.log_debug(traceback.format_exc())
+            return lines
