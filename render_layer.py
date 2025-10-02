@@ -10,7 +10,7 @@ from .translation_core import TranslationCache, detect_language_argos, log
 
 class TranslateRenderLayer(RenderLayer):
     name = "Translation"
-    default_enable_state = RenderLayerDefaultEnableState.EnabledByDefaultRenderLayerDefaultEnableState
+    default_enable_state = RenderLayerDefaultEnableState.DisabledByDefaultRenderLayerDefaultEnableState
 
     def __init__(self):
         super().__init__()
