@@ -14,31 +14,41 @@ from .render_layer import TranslateRenderLayer
 from .symbol_renamer import TranslateSymbolRenamer, SymbolRenamerThread
 from binaryninja import PluginCommand, Settings, Symbol, interaction
 from .translation_core import log, TranslationCache
+from .language_installer import show_language_installer
 
 TranslateRenderLayer.register()
 def translate_symbols_command(bv):
     """Manually trigger symbol translation"""
     log.log_info("Manual symbol translation triggered")
-    try:
-        dest_lang = Settings().get_string("translation.destination_language")
-        if dest_lang and dest_lang != "None":
-            thread = SymbolRenamerThread(bv)
-            thread.start()
-        else:
-            log.log_info("No destination language selected")
-    except Exception as e:
-        log.log_error(f"Error checking destination language: {e}")
+    dest_lang = Settings().get_string("translation.destination_language")
+    if dest_lang and dest_lang != "None":
+        thread = SymbolRenamerThread(bv)
+        thread.start()
+    else:
+        log.log_info("No destination language selected")
+        # Offer to open language installer
+        result = interaction.show_message_box(
+            "Translation Plugin",
+            "No destination language selected.\n\nWould you like to install language packages?",
+            buttons=interaction.MessageBoxButtonSet.YesNoButtonSet
+        )
+        if result == interaction.MessageBoxButtonResult.YesButton:
+            show_language_installer(bv)
 def translate_single_symbol(bv, addr):
     """Translate a single symbol at the current location"""
     log.log_info("Single symbol translation triggered")
 
-    try:
-        dest_lang = Settings().get_string("translation.destination_language")
-        if not dest_lang or dest_lang == "None":
-            log.log_info("No destination language selected")
-            return
-    except Exception as e:
-        log.log_error(f"Error checking destination language: {e}")
+    dest_lang = Settings().get_string("translation.destination_language")
+    if not dest_lang or dest_lang == "None":
+        log.log_info("No destination language selected")
+        # Offer to open language installer
+        result = interaction.show_message_box(
+            "Translation Plugin",
+            "No destination language selected.\n\nWould you like to install language packages?",
+            buttons=interaction.MessageBoxButtonSet.YesNoButtonSet
+        )
+        if result == interaction.MessageBoxButtonResult.YesButton:
+            show_language_installer(bv)
         return
 
     symbol = bv.get_symbol_at(addr)
@@ -55,11 +65,7 @@ def translate_single_symbol(bv, addr):
 
     translated = cache.get_clean(symbol.name)
     if translated:
-        try:
-            prefix = Settings().get_string("translation.rename_prefix")
-        except:
-            prefix = "🌎 "
-
+        prefix = Settings().get_string("translation.rename_prefix")
         if prefix:
             translated = prefix + translated
 
@@ -75,13 +81,17 @@ def add_string_translation_comments(bv):
     """Add translation comments to all strings in the binary"""
     log.log_info("Adding translation comments to strings")
 
-    try:
-        dest_lang = Settings().get_string("translation.destination_language")
-        if not dest_lang or dest_lang == "None":
-            log.log_info("No destination language selected")
-            return
-    except Exception as e:
-        log.log_error(f"Error checking destination language: {e}")
+    dest_lang = Settings().get_string("translation.destination_language")
+    if not dest_lang or dest_lang == "None":
+        log.log_info("No destination language selected")
+        # Offer to open language installer
+        result = interaction.show_message_box(
+            "Translation Plugin",
+            "No destination language selected.\n\nWould you like to install language packages?",
+            buttons=interaction.MessageBoxButtonSet.YesNoButtonSet
+        )
+        if result == interaction.MessageBoxButtonResult.YesButton:
+            show_language_installer(bv)
         return
 
     cache = TranslationCache()
@@ -101,11 +111,7 @@ def add_string_translation_comments(bv):
 
             translated = cache.get(string_value)
             if translated and translated != string_value:
-                try:
-                    prefix = Settings().get_string("translation.rename_prefix")
-                except:
-                    prefix = "🌎 "
-
+                prefix = Settings().get_string("translation.rename_prefix")
                 if prefix:
                     translated = prefix + translated
 
@@ -160,6 +166,12 @@ PluginCommand.register(
     "Translate\\Add String Translation Comments",
     "Add translation comments to all string references",
     add_string_translation_comments
+)
+
+PluginCommand.register(
+    "Translate\\Install Languages...",
+    "Install or uninstall translation language packages",
+    show_language_installer
 )
 
 __all__ = ['TranslateRenderLayer']

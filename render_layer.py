@@ -19,24 +19,24 @@ class TranslateRenderLayer(RenderLayer):
 
     def _get_rename_prefix(self):
         """Get the prefix to add to translated text"""
-        try:
-            return Settings().get_string("translation.rename_prefix")
-        except:
-            return "🌎 "
+        return Settings().get_string("translation.rename_prefix")
+
+    def _get_current_settings(self):
+        """Get current source and destination language settings"""
+        source_lang = Settings().get_string("translation.source_language")
+        dest_lang = Settings().get_string("translation.destination_language")
+        return source_lang, dest_lang
 
     def _should_process(self):
         """Check if render layer should process based on destination language setting"""
-        try:
-            dest_lang = Settings().get_string("translation.destination_language")
-            should_process = dest_lang and dest_lang != "None"
-            if should_process:
-                log.log_debug(f"Render layer processing enabled for language: {dest_lang}")
-            else:
-                log.log_debug("No destination language selected, render layer inactive")
-            return should_process
-        except Exception as e:
-            log.log_debug(f"Error checking settings: {e}")
-            return False
+        _, dest_lang = self._get_current_settings()
+
+        should_process = dest_lang and dest_lang != "None"
+        if should_process:
+            log.log_debug(f"Render layer processing enabled for language: {dest_lang}")
+        else:
+            log.log_debug("No destination language selected, render layer inactive")
+        return should_process
 
     def _replace_token_text(self, token, translated_text):
         """Create a new token with replaced text"""
@@ -53,6 +53,7 @@ class TranslateRenderLayer(RenderLayer):
     def apply_to_linear_view_object(self, obj, prev, next, lines):
         """Apply translations to Linear View"""
         log.log_debug(f"apply_to_linear_view_object called with {len(lines)} lines")
+
         if not self._should_process():
             return lines
 
@@ -93,6 +94,7 @@ class TranslateRenderLayer(RenderLayer):
     def apply_to_disassembly_block(self, block, lines):
         """Apply translations to disassembly/graph view"""
         log.log_debug(f"apply_to_disassembly_block called with {len(lines)} lines")
+
         if not self._should_process():
             return lines
 

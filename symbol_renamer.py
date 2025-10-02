@@ -15,10 +15,7 @@ class TranslateSymbolRenamer:
 
     def _get_rename_prefix(self):
         """Get the prefix to add to renamed symbols"""
-        try:
-            return Settings().get_string("translation.rename_prefix")
-        except:
-            return "🌎 "
+        return Settings().get_string("translation.rename_prefix")
 
     def rename_symbols(self, bv):
         """Rename all foreign language symbols in the binary view"""

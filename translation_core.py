@@ -25,6 +25,8 @@ class TranslationCache:
             self.models = {}
             self.models_initialized = False
             self.alert_shown = False
+            self.cached_source_lang = None
+            self.cached_dest_lang = None
             log.log_debug("Translation cache initialized")
 
     def _init_models(self):
@@ -37,6 +39,8 @@ class TranslationCache:
 
         try:
             dest_lang = Settings().get_string("translation.destination_language")
+            log.log_debug(f"Destination language setting: '{dest_lang}'")
+
             if not dest_lang or dest_lang == "None":
                 log.log_warn("No destination language selected in settings")
                 return
@@ -44,6 +48,8 @@ class TranslationCache:
             import argostranslate.package
 
             installed_packages = argostranslate.package.get_installed_packages()
+            log.log_debug(f"Installed packages: {[(pkg.from_code, pkg.to_code) for pkg in installed_packages]}")
+
             for pkg in installed_packages:
                 if pkg.to_code == dest_lang:
                     self.models[pkg.from_code] = pkg
@@ -62,6 +68,20 @@ class TranslationCache:
 
     def get(self, text, source_lang=None):
         """Get translation from cache or perform new translation"""
+        # Check if settings have changed and invalidate cache/models if needed
+        current_source_lang = Settings().get_string("translation.source_language")
+        current_dest_lang = Settings().get_string("translation.destination_language")
+        log.log_debug(f"Settings: source='{current_source_lang}', dest='{current_dest_lang}'")
+
+        if (self.cached_source_lang != current_source_lang or
+            self.cached_dest_lang != current_dest_lang):
+            log.log_debug(f"Settings changed, clearing cache and reinitializing models")
+            self.cache = {}
+            self.models = {}
+            self.models_initialized = False
+            self.cached_source_lang = current_source_lang
+            self.cached_dest_lang = current_dest_lang
+
         cache_key = f"{text}:{source_lang if source_lang else 'auto'}"
         if cache_key in self.cache:
             return self.cache[cache_key]
@@ -76,10 +96,11 @@ class TranslationCache:
                 source_lang = user_source_lang
                 log.log_debug(f"Using user-selected source language: {source_lang}")
 
+        # Only auto-detect if source language is still None (i.e., Auto mode)
         if source_lang is None:
             source_lang = detect_language_argos(text, self.models)
             if source_lang:
-                log.log_debug(f"Detected language '{source_lang}' for text: {repr(text)}")
+                log.log_debug(f"Auto-detected language '{source_lang}' for text: {repr(text)}")
 
         if source_lang and source_lang in self.models:
             translated = translate_text(text, source_lang, self.models[source_lang])
@@ -87,7 +108,7 @@ class TranslationCache:
             self.cache[cache_key] = translated
             return translated
 
-        log.log_debug(f"No translation available for '{text}' (detected lang: {source_lang})")
+        log.log_debug(f"No translation available for '{text}' (source lang: {source_lang}, available models: {list(self.models.keys())})")
         self.cache[cache_key] = text
         return text
 
